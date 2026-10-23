@@ -1,11 +1,9 @@
-# CTX Feed 自动填写 v1.2.0
+# CTX Feed 左侧排列 v1.3.0
 
-Chrome 打开 chrome://extensions，开启开发者模式，加载本目录（必须直接包含 manifest.json）。更新时删除旧版，解压新版并重新加载。
+删除旧版，解压新版，在 chrome://extensions 开启开发者模式，加载直接包含 manifest.json 的文件夹。刷新 CTX 编辑页面，再点击插件“排列左侧六项”。
 
-在 CTX Feed 编辑页点击插件，输入域名前缀/品牌。此内容会原样写入 File name 和 Manufacturer。GTIN 选 Attribute / _global_unique_id；Color 选 Attribute / Color；Size 选 Attribute / Size；Gender 填 Text / unisex；Age Group 填 Text / adult。输出选择 Default。缺少字段时尝试通过 Add attribute 新增。不自动保存或生成 Feed。
+本版按用户新要求，仅修改唯一 MPN 行下面紧接的六行左侧字段：Manufacturer、GTIN、Color、Size of the item、Gender、Age Group。打开下拉框，通过搜索框查找并点击目标。不会新增行，不操作右侧 Source、Value、Output，不填写 File name，不保存表单。
 
-支持原生 select 以及带 ARIA combobox/option 标识的自定义下拉框。已用 Chromium 模拟页面验证原生下拉框、自定义弹出下拉框、新增缺失字段及重复运行；尚未访问用户真实 WordPress 页面验证。不同版本可能使用其他结构，失败时逐项显示提示，部分字段可能已修改，请核对后保存。
+原有六行的左侧字段将被替换；右侧由 CTX 自身随左侧选择发生的联动变化不在插件控制范围内，请检查后手动保存。其他位置已有同名字段会提示，不删除。找不到 MPN、行数不足或选择失败会停止，已完成的修改保留。
 
-仅在点击按钮时操作当前标签页，不发送站点数据到外部。输入内容保存在本机扩展存储中。
-
-1.2：支持通过 Search or type a value 搜索框筛选选项，等待延迟结果，兼容无 ARIA 角色的选项，并检查点击后的选中标签。
+已在 Chromium 模拟页面测试；尚未在用户实际网站验证。仅在点击时访问当前标签页，无外部数据发送。

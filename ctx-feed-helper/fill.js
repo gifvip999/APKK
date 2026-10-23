@@ -1,4 +1,4 @@
-async function fillCtxFeed(brand) {
+async function fillCtxFeed() {
  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
  const norm=s=>String(s||'').replace(/\s+/g,' ').trim().toLowerCase();
  const visible=e=>!!e.getClientRects().length&&getComputedStyle(e).visibility!=='hidden';
@@ -6,34 +6,6 @@ async function fillCtxFeed(brand) {
  const matches=(s,terms)=>terms.some(t=>norm(s)===norm(t));
  const all=(root,selector)=>Array.from(root.querySelectorAll(selector));
  const controls=root=>all(root,'select,[role="combobox"],button[aria-haspopup="listbox"],button[data-state],input[role="combobox"]').filter(visible);
- const msg=[];
- const rules=[
-  {key:'brand',labels:['Manufacturer[brand]','Manufacturer [brand]','Brand','Manufacturer'],mode:'Text',value:brand},
-  {key:'gtin',labels:['GTIN[gtin]','GTIN [gtin]','GTIN'],mode:'Attribute',value:'_global_unique_id',aliases:['_global_unique_id','Global Unique ID','Global Unique Id (GTIN, UPC, EAN or ISBN)','GTIN']},
-  {key:'color',labels:['Color[color]','Color [color]','Color'],mode:'Attribute',value:'Color'},
-  {key:'size',labels:['Size of the item[size]','Size of the item [size]','Size[size]','Size [size]','Size of the item'],mode:'Attribute',value:'Size'},
-  {key:'gender',labels:['Gender[gender]','Gender [gender]','Gender'],mode:'Text',value:'unisex'},
-  {key:'age_group',labels:['Age Group[age_group]','Age Group [age_group]','Age Group'],mode:'Text',value:'adult'}
- ];
- function isChannel(s,rule){return norm(s).replace(/\s/g,'').includes('['+rule.key+']')||matches(s,rule.labels);}
- function findRow(rule){
-  const candidates=controls(document).filter(e=>isChannel(text(e),rule)||(e.tagName==='SELECT'&&norm(e.value)===rule.key));
-  // Only the channel column is followed by both source mode controls.
-  const rows=[];
-  for(const c of candidates){
-   let p=c.parentElement;
-   for(let depth=0;p&&depth<9;depth++,p=p.parentElement){
-    const toggles=all(p,'button,label,a,[role="tab"],input[type="radio"],input[type="button"]').filter(e=>visible(e)&&matches(text(e),['Text','Attribute']));
-    if(toggles.some(e=>matches(text(e),['Text']))&&toggles.some(e=>matches(text(e),['Attribute']))){
-     const channels=controls(p).filter(e=>/\[[a-z_]+\]/i.test(text(e)));
-     if(channels.length<=1){rows.push(p);break;}
-    }
-   }
-  }
-  const unique=[...new Set(rows)];
-  if(unique.length>1)throw Error('发现多个同名字段，请先删除重复行');
-  return unique[0]||null;
- }
  async function selectOption(control,terms){
   if(control.disabled||control.getAttribute('aria-disabled')==='true')throw Error('下拉框被禁用');
   if(control.tagName==='SELECT'){
@@ -61,6 +33,7 @@ async function fillCtxFeed(brand) {
     // CTX versions also render plain clickable divs without role=option.
     let root=search.parentElement;
     for(let i=0;root&&i<5;i++,root=root.parentElement){
+     if(root===document.body||root===document.documentElement||root.contains(control))break;
      const exact=all(root,'button,li,div,span').filter(e=>visible(e)&&matches(text(e),terms)&&!e.contains(search)&&!all(e,'button,li,div,span').some(c=>matches(text(c),terms)));
      if(exact.length){candidates=[...semantic,...exact];break;}
     }
@@ -90,49 +63,55 @@ async function fillCtxFeed(brand) {
   Object.getOwnPropertyDescriptor(proto,'value').set.call(e,value);
   e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));
  }
- async function addRow(rule){
-  const add=all(document,'button,a').filter(visible).find(e=>/^\+?\s*add attribute$/i.test(text(e).trim()));
-  if(!add)throw Error('当前列表没有此字段，且找不到 Add attribute');
-  const previous=new Set(controls(document));add.click();await sleep(200);
-  // Some versions open an attribute picker directly.
-  const option=all(document,'[role="option"],.select2-results__option').filter(visible).find(e=>isChannel(text(e),rule));
-  if(option){option.click();await sleep(200);return;}
-  const fresh=controls(document).filter(e=>!previous.has(e));
-  const channel=fresh.find(e=>e.tagName==='SELECT'&&Array.from(e.options).some(o=>isChannel(o.textContent,rule)||norm(o.value)===rule.key))||fresh[0];
-  if(!channel)throw Error('新增行未能识别，请手动添加该字段后重试');
-  await selectOption(channel,[...rule.labels,rule.key]);
- }
- // File name is the same prefix the user enters in the popup.
- const labels=all(document,'label').filter(e=>/^file name\s*\*?$/i.test(text(e).trim()));
- let filename=null;
- if(labels.length===1){const label=labels[0];filename=label.control||(label.htmlFor&&document.getElementById(label.htmlFor));if(!filename){let p=label.parentElement;for(let i=0;p&&i<3;i++,p=p.parentElement){const inputs=all(p,'input').filter(visible);if(inputs.length===1){filename=inputs[0];break;}}}}
- if(!filename)filename=all(document,'input').filter(visible).find(e=>/^(feed_?name|file_?name|filename)$/i.test(e.name||e.id));
- if(filename&&!filename.readOnly&&!filename.disabled){setInput(filename,brand);msg.push('✓ File name → '+brand);}else msg.push('✗ File name：无法识别输入框，请手动填写');
- for(const rule of rules){
-  try{
-   let row=findRow(rule);
-   if(!row){await addRow(rule);row=findRow(rule);}
-   if(!row)throw Error('无法识别字段行，请手动添加后重试');
-   const toggle=all(row,'button,label,a,[role="tab"],input[type="button"]').filter(visible).find(e=>matches(text(e),[rule.mode]));
-   if(!toggle)throw Error('找不到 '+rule.mode+' 切换按钮');
-   toggle.click();await sleep(150);row=findRow(rule)||row;
-   if(rule.mode==='Text'){
-    const inputs=all(row,'input:not([type="hidden"]):not([type="radio"]):not([type="checkbox"]):not([type="button"]),textarea').filter(e=>visible(e)&&!e.disabled&&!e.readOnly&&e.getAttribute('role')!=='combobox'&&(toggle.compareDocumentPosition(e)&Node.DOCUMENT_POSITION_FOLLOWING));
-    if(!inputs.length)throw Error('找不到值输入框');setInput(inputs[0],rule.value);await sleep(120);
-   }else{
-    const candidates=controls(row).slice(1).filter(e=>(toggle.compareDocumentPosition(e)&Node.DOCUMENT_POSITION_FOLLOWING));
-    const value=candidates[0];if(!value)throw Error('找不到值下拉框');await selectOption(value,rule.aliases||[rule.value]);
+
+ const targets=[
+  ['brand','Manufacturer[brand]','Manufacturer [brand]'],
+  ['gtin','GTIN[gtin]','GTIN [gtin]'],
+  ['color','Color[color]','Color [color]'],
+  ['size','Size of the item[size]','Size of the item [size]','Size[size]'],
+  ['gender','Gender[gender]','Gender [gender]'],
+  ['age_group','Age Group[age_group]','Age Group [age_group]']
+ ];
+ function channelRows(){
+  const result=[];
+  for(const c of controls(document)){
+   if(!/\[[a-z_0-9]+\]/i.test(text(c)))continue;
+   let row=c.parentElement;
+   for(let depth=0;row&&depth<9;depth++,row=row.parentElement){
+    const toggles=all(row,'button,label,a,[role="tab"],input[type="button"]').filter(visible);
+    if(toggles.some(e=>matches(text(e),['Text']))&&toggles.some(e=>matches(text(e),['Attribute']))){
+     const first=controls(row)[0];
+     const channels=controls(row).filter(e=>/\[[a-z_0-9]+\]/i.test(text(e)));
+     if(first===c&&channels.length<=1)result.push({row,control:c});
+     break;
+    }
    }
-   row=findRow(rule)||row;
-   const outputs=controls(row).slice(1);
-   const output=outputs[outputs.length-1];
-   // New CTX versions show output as a settings button rather than a select.
-   const outputText=all(row,'button,input,select,[role="combobox"]').filter(visible).some(e=>matches(text(e),['Default']));
-   if(outputText){/* already Default */}
-   else if(output&&outputs.length>=(rule.mode==='Attribute'?2:1))await selectOption(output,['Default']);
-   else throw Error('值已填写；无法确认输出类型，请手动选择 Default');
-   msg.push('✓ '+rule.labels[0]+' → '+rule.value);
-  }catch(e){msg.push('✗ '+rule.labels[0]+'：'+e.message);}
+  }
+  return result;
  }
- return msg.join('\n')+'\n请检查后手动保存；本插件不会提交或生成 Feed。';
+ function locate(){
+  const rows=channelRows();
+  const anchors=rows.map((r,i)=>/\[mpn\]/i.test(text(r.control).replace(/\s/g,''))?i:-1).filter(i=>i>=0);
+  if(anchors.length!==1)throw Error('需要唯一的 MPN[mpn] 行，当前找到 '+anchors.length+' 行');
+  const index=anchors[0];
+  if(rows.length-index-1<6)throw Error('MPN 下方不足六行，请先手动准备六个下拉框');
+  return {rows,index};
+ }
+ const reports=[];
+ try{locate();}catch(e){return '未修改：'+e.message;}
+ for(let i=0;i<targets.length;i++){
+  const [key,...labels]=targets[i];
+  try{
+   const {rows,index}=locate();
+   const control=rows[index+1+i].control;
+   if(!text(control).replace(/\s/g,'').toLowerCase().includes('['+key+']'))await selectOption(control,[...labels,key]);
+   const after=locate();
+   if(!text(after.rows[after.index+1+i].control).replace(/\s/g,'').toLowerCase().includes('['+key+']'))throw Error('无法确认选中结果');
+   reports.push('✓ 第 '+(i+1)+' 行 → '+labels[0]);
+  }catch(e){reports.push('✗ 第 '+(i+1)+' 行：'+e.message);reports.push('已停止，后续行未处理。');return reports.join('\n');}
+ }
+ const {rows,index}=locate();
+ const duplicates=rows.filter((r,i)=>!(i>index&&i<=index+6)&&targets.some(([key])=>text(r.control).replace(/\s/g,'').toLowerCase().includes('['+key+']')));
+ if(duplicates.length)reports.push('注意：其他位置还有 '+duplicates.length+' 个同名字段，已保留，请核对重复行。');
+ return reports.join('\n')+'\n左侧六项已排列。右侧未操作，请核对后手动保存。';
 }
