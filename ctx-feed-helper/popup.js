@@ -3,7 +3,7 @@ const button = document.getElementById('fill');
 const status = document.getElementById('status');
 chrome.storage.local.get(['prefix','brand']).then(v => {prefix.value=v.prefix||'';});
 button.addEventListener('click',async()=>{
- button.disabled=true;status.textContent='正在检查表单…';
+ button.disabled=true;status.textContent='正在填写，请保持页面打开，最多约 15 秒…';
  try {
   const values={prefix:prefix.value.trim(),brand:prefix.value.trim()};
   if(!values.brand) throw new Error('请填写品牌。');

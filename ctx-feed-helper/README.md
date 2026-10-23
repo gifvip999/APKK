@@ -1,11 +1,9 @@
-# CTX Feed 自动填写 Chrome 插件
+# CTX Feed 自动填写 v1.1.0
 
-在 Chrome 打开 `chrome://extensions`，打开开发者模式，点击“加载已解压的扩展程序”，选择本目录。
+Chrome 打开 chrome://extensions，开启开发者模式，加载本目录（必须直接包含 manifest.json）。更新时删除旧版，解压新版并重新加载。
 
-进入 WordPress → CTX Feed 编辑页面，点击插件，在“域名前缀 / 品牌”输入框填写所需前缀，再点击“自动填写并选择”。输入内容会原样填入 Manufacturer 品牌栏，不会自动更改大小写。
+在 CTX Feed 编辑页点击插件，输入域名前缀/品牌。此内容会原样写入 File name 和 Manufacturer。GTIN 选 Attribute / _global_unique_id；Color 选 Attribute / Color；Size 选 Attribute / Size；Gender 填 Text / unisex；Age Group 填 Text / adult。输出选择 Default。缺少字段时尝试通过 Add attribute 新增。不自动保存或生成 Feed。
 
-规则：Manufacturer → Text / 品牌；GTIN → Attribute / `_global_unique_id`；Color → Attribute / Color；Size → Attribute / Size；Gender → Text / unisex；Age Group → Text / adult。上述六行输出类型均选 Default。只修改这六行，不自动保存或生成 Feed。
+支持原生 select 以及带 ARIA combobox/option 标识的自定义下拉框。已用 Chromium 模拟页面验证原生下拉框、自定义弹出下拉框、新增缺失字段及重复运行；尚未访问用户真实 WordPress 页面验证。不同版本可能使用其他结构，失败时逐项显示提示，部分字段可能已修改，请核对后保存。
 
-插件仅在点击时访问当前标签页，不向外部发送数据。品牌及域名前缀保存在本机扩展存储。未找到字段或选项时逐项报告；可能已修改其他项目，请核对后保存。
-
-兼容性：根据截图识别标准表格行及原生下拉框，尚未在你的真实网站验证。若 CTX Feed 版本使用不同结构、异步渲染或自定义下拉框，需要根据页面 DOM 调整。截图无法提供准确的 HTML 结构。
+仅在点击按钮时操作当前标签页，不发送站点数据到外部。输入内容保存在本机扩展存储中。
