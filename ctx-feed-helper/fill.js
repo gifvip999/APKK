@@ -41,16 +41,49 @@ async function fillCtxFeed(brand) {
    if(!option)throw Error('没有找到下拉选项：'+terms[0]);
    control.value=option.value;control.dispatchEvent(new Event('input',{bubbles:true}));control.dispatchEvent(new Event('change',{bubbles:true}));await sleep(120);return;
   }
+  // Menus can be portalled and their search field may have no ARIA role.
+  const previousInputs=new Set(all(document,'input').filter(visible));
   control.click();await sleep(180);
-  const find=()=>all(document,'[role="option"],.select2-results__option,[role="menuitem"],.select__option').filter(visible).find(e=>matches(text(e),terms)||terms.some(t=>e.getAttribute('data-value')===t));
-  let option=find();
-  if(!option){
-   const inputs=all(document,'input').filter(e=>visible(e)&&(e.getAttribute('role')==='combobox'||e.className.includes('select2-search')||e.closest('[role="listbox"],[cmdk-root],[data-radix-popper-content-wrapper]')));
-   const search=inputs.find(e=>e===control)||inputs[inputs.length-1];
-   if(search){setInput(search,terms[0]);await sleep(250);option=find();}
+  let search=null;
+  for(let i=0;i<12;i++){
+   const inputs=all(document,'input').filter(e=>visible(e)&&!e.disabled&&!e.readOnly&&e.type!=='hidden');
+   search=inputs.find(e=>!previousInputs.has(e)&&/search|type a value|搜索/i.test(e.placeholder||''))
+    ||inputs.find(e=>!previousInputs.has(e)&&(e.type==='search'||e.getAttribute('role')==='combobox'||/select2-search/.test(e.className)))
+    ||inputs.find(e=>/search or type a value/i.test(e.placeholder||''));
+   if(search)break;
+   if(all(document,'[role="option"],.select2-results__option').some(visible))break;
+   await sleep(80);
   }
-  if(!option){document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',code:'Escape',bubbles:true}));throw Error('未找到下拉选项：'+terms[0]+'（请提供该下拉框截图）');}
+  function find(){
+   const semantic=all(document,'[role="option"],.select2-results__option,[role="menuitem"],.select__option,[cmdk-item]');
+   let candidates=semantic;
+   if(search){
+    // CTX versions also render plain clickable divs without role=option.
+    let root=search.parentElement;
+    for(let i=0;root&&i<5;i++,root=root.parentElement){
+     const exact=all(root,'button,li,div,span').filter(e=>visible(e)&&matches(text(e),terms)&&!e.contains(search)&&!all(e,'button,li,div,span').some(c=>matches(text(c),terms)));
+     if(exact.length){candidates=[...semantic,...exact];break;}
+    }
+   }
+   return candidates.filter(e=>visible(e)&&e.getAttribute('aria-disabled')!=='true'&&!e.disabled).find(e=>matches(text(e),terms)||terms.some(t=>e.getAttribute('data-value')===t));
+  }
+  let option=null;
+  // Search each known label separately; React may render filtered results later.
+  for(const term of search?terms:[null]){
+   if(search){search.focus();setInput(search,term);}
+   for(let i=0;i<20;i++){await sleep(80);option=find();if(option)break;}
+   if(option)break;
+  }
+  if(!option){
+   (search||control).dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',code:'Escape',bubbles:true}));
+   control.focus();
+   throw Error('搜索后仍未找到选项：'+terms[0]+'（请展开对应值下拉框截图）');
+  }
   option.click();await sleep(180);
+  if(!matches(text(control),terms)){
+   for(let i=0;i<10&&!matches(text(control),terms);i++)await sleep(80);
+   if(!matches(text(control),terms))throw Error('已点击选项，但无法确认选中结果：'+terms[0]);
+  }
  }
  function setInput(e,value){
   const proto=e.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;
