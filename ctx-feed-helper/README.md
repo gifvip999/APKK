@@ -1,4 +1,4 @@
-# CTX Feed 左侧排列 v1.4.0
+# CTX Feed 左侧排列 v1.5.0
 
 删除旧版，解压新版，在 chrome://extensions 开启开发者模式，加载直接包含 manifest.json 的文件夹。刷新 CTX 编辑页面，再点击插件“排列左侧六项”。
 
@@ -11,3 +11,7 @@
 ## 第二步：六项全部切换 Text
 
 左侧选择逻辑 fill.js 保持 v1.3 原样。新增独立 text.js 及第二步按钮：验证唯一 MPN 下方六项顺序，然后只将这六行 Source 切换为 Text，不写入 Value、不操作 Output、不保存。已处于 Text 时跳过以保留已有文本。切换模式可能触发 CTX 自身清空原 Attribute 值，请检查页面后手动保存。
+
+## 第三步：填写五项文本
+
+新增独立 values.js，不修改前两步 fill.js、text.js。第三步将 GTIN、Color、Size、Gender、Age Group 的 Value 固定文本依次写为 _global_unique_id、Color、Size、unisex、adult。品牌保留。要求先完成前两步；检查不通过时不写入。不切换模式、不选择动态属性、不操作输出、不自动保存。Text 中的 _global_unique_id、Color、Size 是字面文本，不会读取商品属性。

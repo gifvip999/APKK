@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CTX Feed 自动填写",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "排列 MPN 下方六项，并通过独立按钮将六项切换为 Text。",
   "permissions": [
     "activeTab",
