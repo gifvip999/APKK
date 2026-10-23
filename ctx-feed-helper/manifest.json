@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "CTX Feed 自动填写",
+  "version": "1.0.0",
+  "description": "按指定规则填写 CTX Feed 品牌、GTIN、颜色、尺码、性别和年龄。",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}
